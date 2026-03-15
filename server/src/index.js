@@ -10,6 +10,7 @@ const commentRoutes = require("./routes/commentRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const domainRoutes = require("./routes/domainRoutes");
 const userRoutes = require("./routes/userRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/queries", queryRoutes);
 app.use("/api/queries", commentRoutes);
 app.use("/api/queries", uploadRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found." });

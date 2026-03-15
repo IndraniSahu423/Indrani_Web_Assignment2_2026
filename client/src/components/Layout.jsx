@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { LayoutDashboard, Plus, Settings, LogOut, Shield, Menu, X, BookOpen } from "lucide-react";
+import NotificationBell from "./NotificationBell.jsx";
 
 function cx(...c) { return c.filter(Boolean).join(" "); }
 
@@ -62,6 +63,7 @@ export default function Layout({ children }) {
 
               {user && (
                 <>
+                  <NotificationBell />
                   <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-md ml-2">
                     <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                       {user.name?.charAt(0)?.toUpperCase() || "U"}

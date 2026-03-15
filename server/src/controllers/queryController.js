@@ -6,6 +6,17 @@ function parseId(value) {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+async function notify(userId, message, queryId) {
+  try {
+    await db.query(
+      `INSERT INTO notifications (user_id, query_id, message) VALUES ($1, $2, $3)`,
+      [userId, queryId || null, message]
+    );
+  } catch (e) {
+    console.error("notify insert failed:", e.message);
+  }
+}
+
 async function createQuery(req, res) {
   try {
     const { title, description, priority, domainId } = req.body || {};
@@ -196,6 +207,8 @@ async function updateQuery(req, res) {
         if (student.rowCount > 0) {
           await notifyStudentCoordinatorAssigned(student.rows[0].email, query.title);
         }
+        await notify(assignedTo, `You have been assigned to query: "${query.title}"`, id);
+        await notify(query.created_by, `A coordinator has been assigned to your query: "${query.title}"`, id);
       }
     }
 
@@ -223,6 +236,7 @@ async function updateQuery(req, res) {
       if (student.rowCount > 0) {
         await notifyStudentQueryResolved(student.rows[0].email, query.title, solution || "");
       }
+      await notify(query.created_by, `Your query "${query.title}" has been resolved. Please review and close it.`, id);
     }
 
     return res.status(200).json({ query: updated.rows[0] });
