@@ -9,6 +9,18 @@ function cx(...c) { return c.filter(Boolean).join(" "); }
 
 const PAGE_SIZE = 5;
 
+function WorkloadBadge({ count }) {
+  const n = Number(count);
+  const [cls, label] =
+    n === 0 ? ["bg-green-500/20 text-green-300 border-green-500/30", "Free"] :
+    n <= 2  ? ["bg-indigo-500/20 text-indigo-300 border-indigo-500/30", `${n} active`] :
+    n <= 4  ? ["bg-yellow-500/20 text-yellow-300 border-yellow-500/30", `${n} active`] :
+              ["bg-red-500/20 text-red-300 border-red-500/30", `${n} active`];
+  return (
+    <span className={cx("px-2 py-0.5 rounded-full text-xs font-semibold border", cls)}>{label}</span>
+  );
+}
+
 function Pagination({ page, total, onChange }) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (totalPages <= 1) return null;
@@ -339,7 +351,7 @@ export default function AdminDashboard() {
             <table className="min-w-full">
               <thead className="bg-slate-800">
                 <tr>
-                  {["Name", "Email", "Domain", "Assigned Queries", "Resolved"].map((h) => (
+                  {["Name", "Email", "Domain", "Assigned Queries", "Resolved", "Workload"].map((h) => (
                     <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -354,6 +366,7 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 text-sm text-slate-400">{c.domain || "—"}</td>
                     <td className="px-6 py-4 text-sm text-slate-400">{c.query_count || 0}</td>
                     <td className="px-6 py-4 text-sm text-slate-400">{c.resolved_count || 0}</td>
+                    <td className="px-6 py-4"><WorkloadBadge count={c.open_count || 0} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -490,12 +503,27 @@ export default function AdminDashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Select Coordinator</label>
-              <CustomSelect
-                value=""
-                onChange={(v) => v && handleAssign(v)}
-                options={coordinators.map((c) => ({ value: c.id, label: `${c.name} — ${c.domain || "No domain"}` }))}
-                placeholder="Choose a coordinator"
-              />
+              {(() => {
+                const sorted = [...coordinators].sort((a, b) => Number(a.open_count) - Number(b.open_count));
+                const minLoad = Number(sorted[0]?.open_count ?? 0);
+                return (
+                  <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                    {sorted.map((c) => (
+                      <button key={c.id} onClick={() => handleAssign(c.id)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-800 hover:bg-indigo-600/20 border border-slate-600 hover:border-indigo-500 rounded-lg transition-all text-left">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{c.name}</p>
+                          <p className="text-xs text-slate-400">{c.domain || "No domain"}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {Number(c.open_count) === minLoad && <span className="text-xs text-green-400 font-semibold">Recommended</span>}
+                          <WorkloadBadge count={c.open_count || 0} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </Modal>

@@ -130,7 +130,8 @@ async function getCoordinators(req, res) {
     const result = await db.query(
       `SELECT u.id, u.name, u.email, d.name AS domain,
               COUNT(q.id) AS query_count,
-              COUNT(CASE WHEN q.status IN ('resolved', 'closed') THEN 1 END) AS resolved_count
+              COUNT(CASE WHEN q.status IN ('resolved', 'closed') THEN 1 END) AS resolved_count,
+              COUNT(CASE WHEN q.status NOT IN ('resolved', 'closed') THEN 1 END) AS open_count
        FROM users u
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN domains d ON d.id = u.domain_id
