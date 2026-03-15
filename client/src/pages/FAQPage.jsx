@@ -48,11 +48,14 @@ function FAQCard({ faq }) {
   );
 }
 
+const PAGE_SIZE = 5;
+
 export default function FAQPage() {
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [domain, setDomain] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api.get("/api/queries/faq")
@@ -70,6 +73,12 @@ export default function FAQPage() {
       (!domain || f.domain === domain)
     );
   }, [faqs, search, domain]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  useMemo(() => setPage(1), [search, domain]);
 
   return (
     <div className="py-8 px-4">
@@ -116,7 +125,32 @@ export default function FAQPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</p>
-            {filtered.map((f) => <FAQCard key={f.id} faq={f} />)}
+            {paginated.map((f) => <FAQCard key={f.id} faq={f} />)}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-xs rounded-md bg-slate-800 border border-slate-600 text-slate-300 disabled:opacity-40 hover:border-indigo-500 hover:text-indigo-300 transition-all"
+                >Previous</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    className={cx("px-3 py-1.5 text-xs rounded-md border transition-all",
+                      n === page
+                        ? "bg-indigo-600 border-indigo-500 text-white"
+                        : "bg-slate-800 border-slate-600 text-slate-300 hover:border-indigo-500 hover:text-indigo-300"
+                    )}
+                  >{n}</button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 text-xs rounded-md bg-slate-800 border border-slate-600 text-slate-300 disabled:opacity-40 hover:border-indigo-500 hover:text-indigo-300 transition-all"
+                >Next</button>
+              </div>
+            )}
           </div>
         )}
       </div>
