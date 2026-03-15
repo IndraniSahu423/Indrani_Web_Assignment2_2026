@@ -127,7 +127,7 @@ export default function CreateQueryPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <button
           type="button"

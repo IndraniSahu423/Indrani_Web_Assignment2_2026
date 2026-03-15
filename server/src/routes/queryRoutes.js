@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.get("/", verifyToken, queryController.getAllQueries);
 router.post("/", verifyToken, queryController.createQuery);
+router.get("/faq", queryController.getFAQ);
 router.get("/:id", verifyToken, queryController.getQueryById);
 router.put("/:id", verifyToken, queryController.updateQuery);
 router.patch("/:id", verifyToken, queryController.updateQuery);

@@ -228,13 +228,13 @@ export default function AdminDashboard() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="bg-slate-950 flex items-center justify-center py-8">
       <p className="text-slate-300">Loading...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="bg-slate-950">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Action buttons */}
         <div className="flex items-center gap-3 flex-wrap">

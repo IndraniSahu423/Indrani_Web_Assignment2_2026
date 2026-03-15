@@ -120,13 +120,13 @@ export default function QueryDetailPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="py-32 flex items-center justify-center">
       <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
     </div>
   );
 
   if (!query) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="py-32 flex items-center justify-center">
       <div className="text-center">
         <p className="text-slate-300 font-semibold mb-4">Query not found</p>
         <button onClick={() => navigate("/dashboard")}
@@ -138,7 +138,7 @@ export default function QueryDetailPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <button onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">

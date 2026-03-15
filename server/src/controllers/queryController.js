@@ -199,7 +199,7 @@ async function updateQuery(req, res) {
       }
     }
 
-    if (solution !== undefined && req.user.role === "coordinator") {
+    if (solution !== undefined && ["coordinator", "admin", "superadmin"].includes(req.user.role)) {
       if (typeof solution !== "string" || solution.trim().length < 5) {
         return res.status(400).json({ message: "Solution must be at least 5 characters." });
       }
@@ -247,5 +247,37 @@ async function deleteQuery(req, res) {
   }
 }
 
-module.exports = { createQuery, getAllQueries, getQueryById, updateQuery, deleteQuery };
+async function getFAQ(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT q.id, q.title, q.description, q.solution, q.priority,
+              d.name AS domain, q.created_at
+       FROM queries q
+       JOIN domains d ON d.id = q.domain_id
+       WHERE q.status = 'closed'
+       ORDER BY q.updated_at DESC
+       LIMIT 50`
+    );
+
+    const faqs = await Promise.all(result.rows.map(async (q) => {
+      const comments = await db.query(
+        `SELECT c.content, r.name AS user_role FROM comments c
+         JOIN users u ON u.id = c.user_id
+         JOIN roles r ON r.id = u.role_id
+         WHERE c.query_id = $1 AND r.name IN ('coordinator','admin','superadmin')
+         ORDER BY c.created_at ASC`,
+        [q.id]
+      );
+      const commentSummary = comments.rows.map((c) => c.content).join("\n\n");
+      return { ...q, commentSummary: commentSummary || null };
+    }));
+
+    return res.status(200).json({ faqs });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error." });
+  }
+}
+
+module.exports = { createQuery, getAllQueries, getQueryById, updateQuery, deleteQuery, getFAQ };
 

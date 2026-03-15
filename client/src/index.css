@@ -5,24 +5,12 @@
   accent-color: #6366f1;
 }
 
-button:focus, button:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-html {
+html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  width: 100%;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -30,6 +18,23 @@ body {
   -webkit-font-smoothing: antialiased;
   background: #0f172a;
   color: #f1f5f9;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Layout wrapper — use dvh so it works on tablets/folds/iPads where 100vh includes browser chrome */
+.layout-wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: #0f172a;
+}
+
+button:focus, button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 ::selection { background: rgba(99,102,241,0.3); }

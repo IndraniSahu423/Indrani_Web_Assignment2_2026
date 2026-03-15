@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import CreateQueryPage from "./pages/CreateQueryPage.jsx";
 import QueryDetailPage from "./pages/QueryDetailPage.jsx";
+import FAQPage from "./pages/FAQPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -59,6 +60,7 @@ export default function App() {
           }
         />
 
+        <Route path="/faq" element={<ProtectedRoute><FAQPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Layout>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { LayoutDashboard, Plus, Settings, LogOut, Shield, Menu, X } from "lucide-react";
+import { LayoutDashboard, Plus, Settings, LogOut, Shield, Menu, X, BookOpen } from "lucide-react";
 
 function cx(...c) { return c.filter(Boolean).join(" "); }
 
@@ -38,7 +38,7 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="layout-wrapper">
       <nav className="sticky top-0 z-50 bg-slate-900 border-b border-slate-700 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16 gap-4">
@@ -56,6 +56,7 @@ export default function Layout({ children }) {
               <div className="hidden md:flex items-center gap-1">
                 {navLink("/dashboard", "Dashboard", LayoutDashboard)}
                 {isStudent && navLink("/queries/new", "New Query", Plus)}
+                {navLink("/faq", "FAQ", BookOpen)}
                 {isAdminLevel && navLink("/admin", isSuperadmin ? "Superadmin Panel" : "Admin Panel", isSuperadmin ? Shield : Settings)}
               </div>
 
@@ -93,6 +94,7 @@ export default function Layout({ children }) {
             <div className="md:hidden pb-4 pt-1 border-t border-slate-700 space-y-1">
               {navLink("/dashboard", "Dashboard", LayoutDashboard)}
               {isStudent && navLink("/queries/new", "New Query", Plus)}
+              {navLink("/faq", "FAQ", BookOpen)}
               {isAdminLevel && navLink("/admin", isSuperadmin ? "Superadmin Panel" : "Admin Panel", isSuperadmin ? Shield : Settings)}
               <button
                 onClick={() => { setMenuOpen(false); logout(); }}
