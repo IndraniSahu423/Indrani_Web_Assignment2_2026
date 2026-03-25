@@ -37,11 +37,7 @@ export function AuthProvider({ children }) {
     const res = await api.post("/api/auth/login", { email, password });
     const nextToken = res.data?.token;
     const nextUser = res.data?.user;
-
-    if (!nextToken || !nextUser) {
-      throw new Error("Invalid login response.");
-    }
-
+    if (!nextToken || !nextUser) throw new Error("Invalid login response.");
     setStoredToken(nextToken);
     setToken(nextToken);
     setUser(nextUser);
