@@ -1,6 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const { sendEmail } = require("../utils/email");
+
+// In-memory OTP store: email -> { otp, expiresAt, userId }
+const otpStore = new Map();
 
 function signToken(user) {
   if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
@@ -78,20 +82,16 @@ async function register(req, res) {
   }
 }
 
-async function login(req, res) {
+async function sendOtp(req, res) {
   try {
     const { email, password } = req.body || {};
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ message: "A valid email is required." });
-    }
-    if (typeof password !== "string" || password.length === 0) {
-      return res.status(400).json({ message: "Password is required." });
-    }
+    if (!isValidEmail(email)) return res.status(400).json({ message: "A valid email is required." });
+    if (typeof password !== "string" || password.length === 0) return res.status(400).json({ message: "Password is required." });
 
     const result = await db.query(
-      `SELECT u.id, u.name, u.email, u.password_hash, u.created_at, u.is_active,
-              r.name AS role, d.name AS domain, u.role_id AS "roleId", u.domain_id AS "domainId"
+      `SELECT u.id, u.name, u.email, u.password_hash, u.is_active,
+              r.name AS role, d.name AS domain, u.role_id AS "roleId", u.domain_id AS "domainId", u.created_at
        FROM users u
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN domains d ON d.id = u.domain_id
@@ -99,22 +99,58 @@ async function login(req, res) {
       [email.toLowerCase()]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
+    if (result.rowCount === 0) return res.status(401).json({ message: "Invalid email or password." });
 
     const user = result.rows[0];
-    if (!user.is_active) {
-      return res.status(403).json({ message: "Account is deactivated." });
-    }
+    if (!user.is_active) return res.status(403).json({ message: "Account is deactivated." });
 
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
+    if (!ok) return res.status(401).json({ message: "Invalid email or password." });
 
-    delete user.password_hash;
-    delete user.is_active;
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    otpStore.set(email.toLowerCase(), { otp, expiresAt: Date.now() + 5 * 60 * 1000, userId: user.id });
+
+    await sendEmail(
+      user.email,
+      "Your OTP - E-Cell Portal",
+      `Your one-time password is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share it with anyone.`
+    );
+
+    return res.status(200).json({ message: "OTP sent to your email." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error." });
+  }
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const { email, otp } = req.body || {};
+
+    if (!isValidEmail(email)) return res.status(400).json({ message: "Invalid email." });
+    if (typeof otp !== "string" || otp.length !== 6) return res.status(400).json({ message: "OTP must be 6 digits." });
+
+    const entry = otpStore.get(email.toLowerCase());
+    if (!entry) return res.status(400).json({ message: "No OTP found. Please request a new one." });
+    if (Date.now() > entry.expiresAt) {
+      otpStore.delete(email.toLowerCase());
+      return res.status(400).json({ message: "OTP has expired. Please login again." });
+    }
+    if (entry.otp !== otp) return res.status(400).json({ message: "Incorrect OTP." });
+
+    otpStore.delete(email.toLowerCase());
+
+    const result = await db.query(
+      `SELECT u.id, u.name, u.email, u.created_at,
+              r.name AS role, d.name AS domain, u.role_id AS "roleId", u.domain_id AS "domainId"
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN domains d ON d.id = u.domain_id
+       WHERE u.id = $1`,
+      [entry.userId]
+    );
+
+    const user = result.rows[0];
     const token = signToken(user);
     return res.status(200).json({ token, user });
   } catch (err) {
@@ -127,5 +163,5 @@ async function getMe(req, res) {
   return res.status(200).json({ user: req.user });
 }
 
-module.exports = { register, login, getMe };
+module.exports = { register, sendOtp, verifyOtp, getMe };
 

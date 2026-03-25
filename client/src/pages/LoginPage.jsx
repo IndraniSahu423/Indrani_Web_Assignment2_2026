@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, ShieldCheck } from "lucide-react";
+import api from "../api/axios.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
 function getErrorMessage(err) {
@@ -10,19 +11,42 @@ function getErrorMessage(err) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithToken } = useAuth();
 
+  const [step, setStep] = useState("credentials"); // "credentials" | "otp"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const inputRefs = useRef([]);
 
-  async function onSubmit(e) {
+  async function handleCredentials(e) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await login({ email, password });
+      await api.post("/api/auth/send-otp", { email, password });
+      toast.success("OTP sent to your email.");
+      setStep("otp");
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleOtp(e) {
+    e.preventDefault();
+    const otpValue = otp.join("");
+    if (otpValue.length !== 6) { setError("Please enter the 6-digit OTP."); return; }
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await api.post("/api/auth/verify-otp", { email, otp: otpValue });
+      await loginWithToken({ token: res.data.token, user: res.data.user });
       toast.success("Signed in successfully.");
       navigate("/dashboard", { replace: true });
     } catch (err) {
@@ -34,9 +58,30 @@ export default function LoginPage() {
     }
   }
 
+  function handleOtpInput(index, value) {
+    if (!/^\d*$/.test(value)) return;
+    const next = [...otp];
+    next[index] = value.slice(-1);
+    setOtp(next);
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  }
+
+  function handleOtpKeyDown(index, e) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handleOtpPaste(e) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length === 6) {
+      setOtp(pasted.split(""));
+      inputRefs.current[5]?.focus();
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
@@ -46,62 +91,84 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-6">Sign in to your account</h2>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm">
-              {error}
-            </div>
+          {step === "credentials" ? (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-6">Sign in to your account</h2>
+              {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm">{error}</div>}
+              <form onSubmit={handleCredentials} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input value={email} onChange={(e) => setEmail(e.target.value)}
+                      type="email" autoComplete="email" placeholder="you@example.com" required
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input value={password} onChange={(e) => setPassword(e.target.value)}
+                      type="password" autoComplete="current-password" placeholder="••••••••" required
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <button type="submit" disabled={submitting}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-md transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                  {submitting ? "Sending OTP..." : "Continue"}
+                </button>
+              </form>
+              <p className="mt-6 text-center text-sm text-slate-400">
+                Don't have an account?{" "}
+                <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold">Create Account</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-indigo-600/20 border border-indigo-500/30 rounded-lg">
+                  <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                </div>
+                <h2 className="text-xl font-semibold text-white">Verify your email</h2>
+              </div>
+              <p className="text-sm text-slate-400 mb-6">
+                We sent a 6-digit OTP to <span className="text-indigo-300 font-medium">{email}</span>. Enter it below to sign in.
+              </p>
+
+              {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm">{error}</div>}
+
+              <form onSubmit={handleOtp} className="space-y-6">
+                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (inputRefs.current[i] = el)}
+                      value={digit}
+                      onChange={(e) => handleOtpInput(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      maxLength={1}
+                      inputMode="numeric"
+                      className="w-11 h-12 text-center text-lg font-bold bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                    />
+                  ))}
+                </div>
+
+                <button type="submit" disabled={submitting || otp.join("").length !== 6}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? "Verifying..." : "Verify & Sign In"}
+                </button>
+              </form>
+
+              <button onClick={() => { setStep("credentials"); setOtp(["","","","","",""]); setError(""); }}
+                className="mt-4 w-full text-sm text-slate-400 hover:text-white transition-colors">
+                ← Back to login
+              </button>
+            </>
           )}
-
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-md transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              {submitting ? "Signing in..." : "Login"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-slate-400">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold">
-              Create Account
-            </Link>
-          </p>
         </div>
       </div>
     </div>

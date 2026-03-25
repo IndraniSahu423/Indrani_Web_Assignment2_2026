@@ -24,13 +24,23 @@ router.post(
 );
 
 router.post(
-  "/login",
+  "/send-otp",
   [
     body("email").isEmail().withMessage("A valid email is required."),
     body("password").isString().notEmpty().withMessage("Password is required."),
   ],
   handleValidationErrors,
-  authController.login
+  authController.sendOtp
+);
+
+router.post(
+  "/verify-otp",
+  [
+    body("email").isEmail().withMessage("A valid email is required."),
+    body("otp").isString().isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits."),
+  ],
+  handleValidationErrors,
+  authController.verifyOtp
 );
 
 router.get("/me", verifyToken, authController.getMe);

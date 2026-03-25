@@ -61,6 +61,7 @@ async function notifyStudentQueryResolved(studentEmail, queryTitle, solution) {
 }
 
 module.exports = {
+  sendEmail,
   notifyAdminNewQuery,
   notifyCoordinatorAssigned,
   notifyStudentCoordinatorAssigned,

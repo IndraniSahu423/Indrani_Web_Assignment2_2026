@@ -48,6 +48,14 @@ export function AuthProvider({ children }) {
     return nextUser;
   }
 
+  async function loginWithToken({ token: nextToken, user: nextUser }) {
+    if (!nextToken || !nextUser) throw new Error("Invalid login response.");
+    setStoredToken(nextToken);
+    setToken(nextToken);
+    setUser(nextUser);
+    return nextUser;
+  }
+
   async function register({ name, email, password, role, domainId }) {
     const res = await api.post("/api/auth/register", { name, email, password, role, domainId });
     const nextToken = res.data?.token;
@@ -70,7 +78,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ user, token, booting, isAuthenticated: !!user, login, register, logout }),
+    () => ({ user, token, booting, isAuthenticated: !!user, login, loginWithToken, register, logout }),
     [user, token, booting]
   );
 
